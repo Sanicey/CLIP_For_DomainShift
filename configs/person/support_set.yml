@@ -1,0 +1,107 @@
+MODEL:
+  PRETRAIN_CHOICE: 'imagenet'
+  METRIC_LOSS_TYPE: 'triplet'
+  IF_LABELSMOOTH: 'on'
+  IF_WITH_CENTER: 'no'
+  NAME: 'ViT-B-16'
+  STRIDE_SIZE: [16, 16]
+  ID_LOSS_WEIGHT : 0.25
+  TRIPLET_LOSS_WEIGHT : 1.0
+  I2T_LOSS_WEIGHT : 1.0
+  # SIE_CAMERA: True
+  # SIE_COE : 1.0
+
+INPUT:
+  SIZE_TRAIN: [256, 128]
+  SIZE_TEST: [256, 128]
+  PROB: 0.5 # random horizontal flip
+  RE_PROB: 0.5 # random erasing
+  PADDING: 10
+  PIXEL_MEAN: [0.5, 0.5, 0.5]
+  PIXEL_STD: [0.5, 0.5, 0.5]
+
+DATALOADER:
+  SAMPLER: 'softmax_triplet'
+  NUM_INSTANCE: 1 # 每个batch中 每个样本至少含有的数量
+  NUM_WORKERS: 8
+
+SOLVER:
+  STAGE1:
+    IMS_PER_BATCH: 256
+    OPTIMIZER_NAME: "Adam"
+    BASE_LR: 0.00035
+    WARMUP_LR_INIT: 0.00001
+    LR_MIN: 1e-6
+    WARMUP_METHOD: 'linear'
+    WEIGHT_DECAY:  1e-4
+    WEIGHT_DECAY_BIAS: 1e-4
+    MAX_EPOCHS: 120 # 120
+    CHECKPOINT_PERIOD: 60
+    LOG_PERIOD: 50
+    WARMUP_EPOCHS: 5
+
+  STAGE2:
+    IMS_PER_BATCH: 256
+    OPTIMIZER_NAME: "Adam"
+    BASE_LR: 0.000005 # 0.000005
+    WARMUP_METHOD: 'linear'
+    WARMUP_ITERS: 10
+    WARMUP_FACTOR: 0.1
+    WEIGHT_DECAY:  0.0001
+    WEIGHT_DECAY_BIAS: 0.0001
+    LARGE_FC_LR: False
+    MAX_EPOCHS: 120
+    CHECKPOINT_PERIOD: 60
+    LOG_PERIOD: 1
+    EVAL_PERIOD: 2
+    BIAS_LR_FACTOR: 2
+
+    STEPS: [100, 120]
+    GAMMA: 0.1
+
+TEST:
+  EVAL: True
+  IMS_PER_BATCH: 64 # 读入val_data也是这个batch_size
+  RE_RANKING: False
+  WEIGHT: './output/vit_clip/market1501ViT-B-16_stage2_60.pth'
+  NECK_FEAT: 'before'
+  FEAT_NORM: 'yes'
+
+DATASETS:
+   NAMES: ('market1501')
+   ROOT_DIR: ('/home/sanicee/PycharmProjects/Market-1501-v15.09.15_')
+
+#   NAMES: ('dukemtmc')
+#   ROOT_DIR: ('')
+# OUTPUT_DIR: ''
+
+#   NAMES: ('occ_duke')
+#   ROOT_DIR: ('')
+# OUTPUT_DIR: ''
+
+#   NAMES: ('msmt17')
+#   ROOT_DIR: ('')
+# OUTPUT_DIR: ''
+
+OUTPUT_DIR: './output/vit_clip' # stage 1 model
+
+Target:
+#  NAMES: ('market1501')
+#  ROOT_DIR: ('/home/sanicee/PycharmProjects/Market-1501-v15.09.15_')
+
+  NAMES: ('dukemtmc') # 这个不能修改
+  ROOT_DIR: ('/home/sanicee/PycharmProjects/DukeMTMC-reID_')
+
+  #   NAMES: ('occ_duke')
+  #   ROOT_DIR: ('')
+
+  #   NAMES: ('msmt17')
+  #   ROOT_DIR: ('')
+
+Support_set:
+  Stage1model: '/home/sanicee/PycharmProjects/CLIP_For_DomainShift/output/vit_clip/ViT-B-16_60.pth' # 读入stage1model的地址 ViT-B-16_stage1_120.pth
+  NAMES: 'support_set_of_dukemtmc_1_imgs_from_source_domain_market1501' # support_set的文件夹名字
+  ROOT_DIR: './support_set' # 地址
+  OUTPUT_DIR: './output/domain_shift' # 保存训练之后模型的位置
+
+# CUDA_VISIBLE_DEVICES=0 python train_clipreid.py --config_file configs/person/vit_clipreid.yml
